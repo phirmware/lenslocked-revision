@@ -15,6 +15,8 @@ var (
 	ErrInvalidID = errors.New("models: invalid id provided")
 )
 
+const userPwPepper = "secret-pepper-string"
+
 // User represents a user object
 type User struct {
 	gorm.Model
@@ -90,7 +92,7 @@ func (us *UserService) Find() (*[]User, error) {
 
 // Create a new user
 func (us *UserService) Create(user *User) error {
-	hashedByte, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashedByte, err := bcrypt.GenerateFromPassword([]byte(user.Password+userPwPepper), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
@@ -117,6 +119,7 @@ func (us *UserService) DestructiveReset() error {
 	return us.AutoMigrate()
 }
 
+// AutoMigrate migrates the user table into the DB
 func (us *UserService) AutoMigrate() error {
 	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
 		return err
