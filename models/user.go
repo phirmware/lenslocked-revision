@@ -13,6 +13,12 @@ var (
 
 	// ErrInvalidID is returned when an invalid ID e.g 0 is provided
 	ErrInvalidID = errors.New("models: invalid id provided")
+
+	ErrPasswordMissing = errors.New("models: Password is missing")
+
+	ErrUserNotFound = errors.New("models: User not found")
+
+	ErrInvalidPassword = errors.New("models: Invalid password")
 )
 
 // User represents a user object
@@ -97,6 +103,23 @@ func (us *UserService) Create(user *User) error {
 	user.PasswordHash = string(hashedByte)
 	user.Password = ""
 	return us.db.Create(&user).Error
+}
+
+func (us *UserService) Login(user *User) (*User, error) {
+	if user.Password == "" {
+		return nil, ErrPasswordMissing
+	}
+
+	foundUser, err := us.ByEmail(user.Email)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(user.Password)); err != nil {
+		return nil, ErrInvalidPassword
+	}
+
+	return foundUser, nil
 }
 
 // Update will update the user

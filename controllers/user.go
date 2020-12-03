@@ -9,6 +9,7 @@ import (
 
 type User struct {
 	SignUpView *views.View
+	LoginView  *views.View
 	us         *models.UserService
 }
 
@@ -18,10 +19,16 @@ type SignUpForm struct {
 	Password string `schema:"password"`
 }
 
+type LoginForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
 func NewUser(us *models.UserService) *User {
 	return &User{
 		SignUpView: views.NewView("bootstrap", "users/signup"),
-		us: us,
+		LoginView:  views.NewView("bootstrap", "users/login"),
+		us:         us,
 	}
 }
 
@@ -37,8 +44,8 @@ func (u *User) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := models.User{
-		Name:  form.Name,
-		Email: form.Email,
+		Name:     form.Name,
+		Email:    form.Email,
 		Password: form.Password,
 	}
 
@@ -54,5 +61,25 @@ func (u *User) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "A user with Name %s , Email %s, and password hash %s", foundUser.Name, foundUser.Email, foundUser.PasswordHash)
+}
 
+func (u *User) SignIn(w http.ResponseWriter, r *http.Request) {
+	u.LoginView.Render(w, nil)
+}
+
+func (u *User) Login(w http.ResponseWriter, r *http.Request) {
+	var user LoginForm
+	if err := ParseForm(r, &user); err != nil {
+		panic(err)
+	}
+
+	foundUser, err := u.us.Login(&models.User{
+		Email:    user.Email,
+		Password: user.Password,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Fprintf(w, "%+v", foundUser)
 }

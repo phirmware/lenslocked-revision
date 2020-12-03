@@ -40,6 +40,8 @@ func main() {
 	r.Handle("/contact", staticC.Contact).Methods("Get")
 	r.HandleFunc("/signup", usersC.SignUp).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
+	r.HandleFunc("/login", usersC.SignIn).Methods("GET")
+	r.HandleFunc("/login", usersC.Login).Methods("POST")
 
 	fmt.Println("Starting the server on port 3000")
 	listener := http.ListenAndServe(":3000", r)
