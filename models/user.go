@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jinzhu/gorm"
@@ -14,10 +15,13 @@ var (
 	// ErrInvalidID is returned when an invalid ID e.g 0 is provided
 	ErrInvalidID = errors.New("models: invalid id provided")
 
+	// ErrPasswordMissing ris returned when the password is empty
 	ErrPasswordMissing = errors.New("models: Password is missing")
 
+	// ErrUserNotFound is returned when the user is not in the db
 	ErrUserNotFound = errors.New("models: User not found")
 
+	// ErrInvalidPassword is returned when the password entered for a oparticular user is wrong
 	ErrInvalidPassword = errors.New("models: Invalid password")
 )
 
@@ -105,17 +109,18 @@ func (us *UserService) Create(user *User) error {
 	return us.db.Create(&user).Error
 }
 
-func (us *UserService) Login(user *User) (*User, error) {
-	if user.Password == "" {
+// Authenticate authenticates the user on login
+func (us *UserService) Authenticate(email, password string) (*User, error) {
+	if password == "" {
 		return nil, ErrPasswordMissing
 	}
 
-	foundUser, err := us.ByEmail(user.Email)
+	foundUser, err := us.ByEmail(email)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(user.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password)); err != nil {
 		return nil, ErrInvalidPassword
 	}
 
@@ -140,6 +145,7 @@ func (us *UserService) DestructiveReset() error {
 	return us.AutoMigrate()
 }
 
+// AutoMigrate migrates the user model to the db
 func (us *UserService) AutoMigrate() error {
 	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
 		return err
