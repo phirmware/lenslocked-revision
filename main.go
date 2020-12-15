@@ -31,7 +31,8 @@ func main() {
 	}
 	defer us.Close()
 
-	us.DestructiveReset()
+	us.AutoMigrate()
+	// us.DestructiveReset()
 	// if err := us.AutoMigrate(); err != nil {
 	// 	panic(err)
 	// }
@@ -42,6 +43,7 @@ func main() {
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
 	r.HandleFunc("/login", usersC.SignIn).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
+	r.HandleFunc("/cookie", usersC.CookieTest).Methods("GET")
 
 	fmt.Println("Starting the server on port 3000")
 	listener := http.ListenAndServe(":3000", r)

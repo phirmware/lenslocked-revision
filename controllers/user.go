@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"revision/lenslocked.com/models"
+	"revision/lenslocked.com/rand"
 	"revision/lenslocked.com/views"
 )
 
@@ -11,7 +12,7 @@ import (
 type User struct {
 	SignUpView *views.View
 	LoginView  *views.View
-	us         *models.UserService
+	us         models.UserService
 }
 
 // SignUpForm defines the shape of the signup form
@@ -28,7 +29,7 @@ type LoginForm struct {
 }
 
 // NewUser returns the usermodel struct
-func NewUser(us *models.UserService) *User {
+func NewUser(us models.UserService) *User {
 	return &User{
 		SignUpView: views.NewView("bootstrap", "users/signup"),
 		LoginView:  views.NewView("bootstrap", "users/login"),
@@ -60,13 +61,17 @@ func (u *User) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	foundUser, err := u.us.ByEmail(user.Email)
-	if err != nil {
+	// foundUser, err := u.us.ByEmail(user.Email)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	if err := u.setCookie(w, &user); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Fprintf(w, "A user with Name %s , Email %s, and password hash %s", foundUser.Name, foundUser.Email, foundUser.PasswordHash)
+	http.Redirect(w, r, "/cookie", http.StatusFound)
 }
 
 // SignIn handles the GET login
@@ -83,8 +88,50 @@ func (u *User) Login(w http.ResponseWriter, r *http.Request) {
 
 	foundUser, err := u.us.Authenticate(user.Email, user.Password)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if err := u.setCookie(w, foundUser); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/cookie", http.StatusFound)
+}
+
+// CookieTest gets the cookie and returns it
+func (u *User) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("remember_token")
+	if err != nil {
 		panic(err)
 	}
 
-	fmt.Fprintf(w, "%+v", foundUser)
+	fmt.Println(cookie.Value, "Cookit value")
+
+	user, err := u.us.ByRemember(cookie.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, "%+v", user)
+}
+
+func (u *User) setCookie(w http.ResponseWriter, user *models.User) error {
+	if user.Remember == "" {
+		str, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = str
+		u.us.Update(user)
+	}
+	fmt.Println(user.Remember, "user remember token")
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    user.Remember,
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &cookie)
+	return nil
 }
